@@ -1,26 +1,31 @@
 name: Python Package using Conda
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   build-linux:
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 5
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10]
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
       with:
-        python-version: '3.10'
+        python-version: ${{ matrix.python-version }}
     - name: Add conda to system path
       run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
-    - name: Install dependencies
+    - name: Create conda environment
       run: |
-        conda env update --file environment.yml --name base
+        conda env create -f environment.yml
+        conda activate myenv
     - name: Lint with flake8
       run: |
         conda install flake8
@@ -32,3 +37,54 @@ jobs:
       run: |
         conda install pytest
         pytest
+
+  deploy:
+    needs: build-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.10
+      - name: Add conda to system path
+        run: |
+          echo $CONDA/bin >> $GITHUB_PATH
+      - name: Create conda environment
+        run: |
+          conda env create -f environment.yml
+          conda activate myenv
+      - name: Build and publish
+        run: |
+          python setup.py sdist bdist_wheel
+          pip install twine
+          twine upload dist/*
+
+name: Estadistica_Descriptiva
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+      
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas
+      
+    - name: Execute Python script
+      run: |
+        python main.py
